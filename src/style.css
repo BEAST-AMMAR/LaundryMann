@@ -1,0 +1,67 @@
+/* GLOBAL THEME */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+    color: #FFFFFF;
+}
+
+/* Background Animation */
+.stApp {
+    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* GLASSMORPHISM CARDS */
+.css-1r6slb0, .css-12oz5g7 {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+}
+
+/* INPUT FIELDS */
+.stTextInput input {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* BUTTONS */
+.stButton>button {
+    background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%);
+    color: #0f0c29;
+    border: none;
+    border-radius: 12px;
+    font-weight: 800;
+    padding: 0.5rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.stButton>button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 201, 255, 0.5);
+}
+
+/* CUSTOM METRICS */
+div[data-testid="stMetricValue"] {
+    font-size: 2rem;
+    background: -webkit-linear-gradient(#eee, #333);
+    -webkit-background-clip: text;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+/* HIDE STREAMLIT BRANDING */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
