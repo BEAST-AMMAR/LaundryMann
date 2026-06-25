@@ -9,6 +9,10 @@ import os
 
 # Import our custom modules
 from src import auth
+from src.models.stain_detector import StainDetector
+from src.models.fabric_classifier import FabricClassifier
+from src.models.color_classifier import ColorClassifier
+from src.core.decision_engine import LaundryDecisionEngine
 
 # --- CONFIGURATION ---
 st.set_page_config(
@@ -28,25 +32,59 @@ local_css("src/style.css")
 # Initialize DB
 auth.init_db()
 
-# --- MOCK INFERENCE FUNCTION (Replace with your actual CNN import) ---
-def predict_laundry(image):
-    # This simulates your CNN + HSV logic delay
-    time.sleep(1) 
+# --- MODEL INITIALIZATION ---
+@st.cache_resource
+def load_models():
+    stain_detector = StainDetector()
+    fabric_classifier = FabricClassifier()
+    color_classifier = ColorClassifier()
+    decision_engine = LaundryDecisionEngine()
+    return stain_detector, fabric_classifier, color_classifier, decision_engine
+
+stain_detector, fabric_classifier, color_classifier, decision_engine = load_models()
+
+def predict_laundry(image, odor_detected=False, uv_fluorescence=False):
+    # Convert PIL Image to BGR/RGB numpy array for inference
+    img_array = np.array(image.convert('RGB'))
     
-    # Mock Logic for Demo Purposes (Replace this block with your model inference)
-    # img_tensor = preprocess(image)
-    # pred = model(img_tensor)
+    # Run inferences
+    stains, annotated_img = stain_detector.detect_stains(img_array)
+    fabric_label, fabric_conf = fabric_classifier.predict_fabric(img_array)
+    color_label, color_conf = color_classifier.predict_color(img_array)
     
-    # Returning random consistent results for UI demo
+    # Run decision engine
+    routing_bin, wash_instructions = decision_engine.decide_routing(
+        color=color_label,
+        fabric=fabric_label,
+        stains=stains,
+        odor_detected=odor_detected,
+        uv_fluorescence=uv_fluorescence
+    )
+    
+    # Map to cycle/temp recommendation
+    BIN_RECOMMENDATIONS = {
+        "BIN_A": {"cycle": "Standard", "temp": "40°C", "detergent": "Standard Detergent"},
+        "BIN_B": {"cycle": "Heavy Duty", "temp": "60°C", "detergent": "Heavy Enzyme Pre-Treat"},
+        "BIN_C": {"cycle": "Normal Cold", "temp": "20°C", "detergent": "Color-Safe Detergent"},
+        "BIN_D": {"cycle": "Stain Cycle", "temp": "30°C", "detergent": "Oxygen Booster & Pre-Treat"},
+        "BIN_E": {"cycle": "Delicate", "temp": "30°C", "detergent": "Mild/Gentle Liquid Detergent"},
+        "BIN_F": {"cycle": "Sanitize", "temp": "Cold (Ozone)", "detergent": "Ozone Treatment"},
+        "BIN_G": {"cycle": "Manual Spot Treatment", "temp": "N/A", "detergent": "Manual Inspection Required"}
+    }
+    
+    rec = BIN_RECOMMENDATIONS.get(routing_bin, {"cycle": "Manual Spot Treatment", "temp": "N/A", "detergent": "Manual Inspection Required"})
+    
     results = {
-        "fabric": "Silk",
-        "stain": "Oil Stain",
-        "confidence": 0.88,
-        "recommendation": {
-            "temp": "30°C",
-            "cycle": "Delicate",
-            "detergent": "Enzyme-based"
-        }
+        "fabric": fabric_label,
+        "fabric_conf": fabric_conf,
+        "color": color_label,
+        "color_conf": color_conf,
+        "stains": stains,
+        "stains_detected": len(stains),
+        "annotated_img": annotated_img,
+        "routing_bin": routing_bin,
+        "wash_instructions": wash_instructions,
+        "recommendation": rec
     }
     return results
 
@@ -114,7 +152,7 @@ def dashboard_page():
         fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="white")
         st.plotly_chart(fig2, use_container_width=True)
 
-def scanner_page():
+def scanner_page(odor_detected=False, uv_fluorescence=False):
     st.markdown("## 📷 Live Fabric Analysis")
     
     col1, col2 = st.columns([1, 1])
@@ -136,25 +174,36 @@ def scanner_page():
     with col2:
         st.markdown("### AI Diagnosis")
         if final_image is not None:
-            # Display Image
-            st.image(final_image, caption="Input Image", use_column_width=True)
-            
             with st.spinner('AI Neural Network Processing...'):
                 # Call Logic
-                data = predict_laundry(final_image)
+                data = predict_laundry(final_image, odor_detected, uv_fluorescence)
+            
+            # Display Annotated Image
+            st.image(data['annotated_img'], caption="Live Vision Feed (YOLOv8 & PyTorch CNN)", use_column_width=True)
             
             # Display Results Cards
             st.success("Analysis Complete")
             
-            res_col1, res_col2 = st.columns(2)
+            res_col1, res_col2, res_col3 = st.columns(3)
             with res_col1:
-                st.info(f"**Fabric:** {data['fabric']}")
-                st.info(f"**Stain:** {data['stain']}")
+                st.info(f"**Fabric:** {data['fabric']}\n({data['fabric_conf']*100:.1f}%)")
             with res_col2:
-                st.warning(f"**Confidence:** {int(data['confidence']*100)}%")
+                st.info(f"**Color:** {data['color']}\n({data['color_conf']*100:.1f}%)")
+            with res_col3:
+                st.warning(f"**Stains:** {data['stains_detected']} Detected")
+            
+            if odor_detected or uv_fluorescence:
+                st.error("🚨 SENSOR OVERRIDE ENGAGED: Invisible threats detected.")
             
             st.markdown("---")
             st.markdown("### 🧼 Recommended Cycle")
+            
+            # Decision Box
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 15px; border-radius: 12px; color: white; text-align: center; font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);">
+                Route to: {data['routing_bin']} ({data['wash_instructions']})
+            </div>
+            """, unsafe_allow_html=True)
             
             # Custom HTML Card for Recommendation
             st.markdown(f"""
@@ -173,6 +222,17 @@ else:
     with st.sidebar:
         st.title("Navigation")
         page = st.radio("Go to", ["Dashboard", "Live Scanner"])
+        
+        odor_detected = False
+        uv_fluorescence = False
+        if page == "Live Scanner":
+            st.markdown("---")
+            st.markdown("### 🎛️ Hardware Sensors")
+            st.markdown("Override standard visual AI with simulated physical sensors.")
+            odor_detected = st.checkbox("💨 E-Nose (Detect VOC/Odor)")
+            uv_fluorescence = st.checkbox("🔦 UV Multispectral")
+            
+        st.markdown("---")
         if st.button("Logout"):
             st.session_state['logged_in'] = False
             st.experimental_rerun()
@@ -180,4 +240,6 @@ else:
     if page == "Dashboard":
         dashboard_page()
     elif page == "Live Scanner":
-        scanner_page()
+        scanner_page(odor_detected, uv_fluorescence)
+
+

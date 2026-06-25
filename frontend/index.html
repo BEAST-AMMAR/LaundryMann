@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NEXUS Robotic Sorter AI — Commercial grade multispectral ensemble pipeline for autonomous garment classification and robotic routing.">
+    <title>NEXUS · Robotic Sorter AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <!-- ═══ Sidebar ═══ -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Brand -->
+            <div class="sidebar-brand">
+                <div class="brand-mark">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                        <path d="M14 2L25.66 8.5V21.5L14 28L2.34 21.5V8.5L14 2Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        <circle cx="14" cy="15" r="4" fill="currentColor" opacity="0.4"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">NEXUS</span>
+                    <span class="brand-sub">Robotic Sorter AI</span>
+                </div>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Sensors -->
+            <div class="sidebar-section">
+                <p class="section-label">Hardware Sensors</p>
+                <p class="section-desc">Override visual AI with physical sensors for specialized handling.</p>
+
+                <label class="nx-toggle" for="odor-sensor">
+                    <input type="checkbox" id="odor-sensor">
+                    <span class="nx-toggle-track">
+                        <span class="nx-toggle-thumb"></span>
+                    </span>
+                    <div class="nx-toggle-info">
+                        <span class="nx-toggle-name">E-Nose · VOC/Odor</span>
+                        <span class="nx-toggle-hint">Volatile organic compound detection</span>
+                    </div>
+                </label>
+
+                <label class="nx-toggle" for="uv-sensor">
+                    <input type="checkbox" id="uv-sensor">
+                    <span class="nx-toggle-track">
+                        <span class="nx-toggle-thumb"></span>
+                    </span>
+                    <div class="nx-toggle-info">
+                        <span class="nx-toggle-name">UV Multispectral</span>
+                        <span class="nx-toggle-hint">Invisible stain fluorescence scan</span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Upload -->
+            <div class="sidebar-section">
+                <p class="section-label">Initialize Scan</p>
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-zone-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drop garment image<br><span>or click to browse</span></p>
+                    <input type="file" id="file-input" accept="image/*" hidden>
+                </div>
+                <button id="analyze-btn" class="nx-btn nx-btn-primary" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                    </svg>
+                    Run AI Pipeline
+                </button>
+            </div>
+
+            <!-- Status Footer -->
+            <div class="sidebar-footer">
+                <div class="status-row">
+                    <span class="status-dot online"></span>
+                    <span>Pipeline Online</span>
+                </div>
+                <span class="version-tag">v2.0</span>
+            </div>
+        </aside>
+
+        <!-- ═══ Main Content ═══ -->
+        <main class="main-content">
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="loading-overlay hidden">
+                <div class="loader-ring">
+                    <div></div><div></div><div></div><div></div>
+                </div>
+                <p class="loader-text">Running Deep Learning Pipeline</p>
+                <p class="loader-sub">Stain detection · Color classification · Fabric analysis</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state">
+                <div class="empty-hex">
+                    <svg width="64" height="64" viewBox="0 0 28 28" fill="none">
+                        <path d="M14 2L25.66 8.5V21.5L14 28L2.34 21.5V8.5L14 2Z" stroke="currentColor" stroke-width="1" fill="none" opacity="0.2"/>
+                        <circle cx="14" cy="15" r="4" fill="currentColor" opacity="0.1"/>
+                    </svg>
+                </div>
+                <h2 class="empty-title">No Garment Scanned</h2>
+                <p class="empty-desc">Upload a garment image to begin autonomous analysis.<br>The AI ensemble analyzes color, fabric, and stains concurrently.</p>
+            </div>
+
+            <!-- Results Grid -->
+            <div class="results-grid hidden" id="results-container">
+                <!-- Vision Feed Card -->
+                <div class="nx-card vision-card">
+                    <div class="nx-card-header">
+                        <span class="nx-card-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            Vision Feed · YOLOv8
+                        </span>
+                        <span class="nx-badge-live">
+                            <span class="live-dot"></span>
+                            LIVE
+                        </span>
+                    </div>
+                    <div class="vision-container">
+                        <img id="vision-feed" src="" alt="Vision Feed">
+                    </div>
+                </div>
+
+                <!-- Analysis Card -->
+                <div class="nx-card analysis-card">
+                    <div class="nx-card-header">
+                        <span class="nx-card-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            Ensemble Analysis
+                        </span>
+                        <span class="nx-latency" id="latency-ms">—</span>
+                    </div>
+
+                    <!-- Metric Tiles -->
+                    <div class="metrics-row">
+                        <div class="nx-metric-tile">
+                            <span class="tile-label">Fabric</span>
+                            <span class="tile-value" id="fabric-val">—</span>
+                            <span class="tile-delta" id="fabric-conf">—</span>
+                        </div>
+                        <div class="nx-metric-tile">
+                            <span class="tile-label">Color</span>
+                            <span class="tile-value" id="color-val">—</span>
+                            <span class="tile-delta" id="color-conf">—</span>
+                        </div>
+                        <div class="nx-metric-tile">
+                            <span class="tile-label">Stains</span>
+                            <span class="tile-value" id="stain-val">—</span>
+                            <span class="tile-delta">Detected</span>
+                        </div>
+                    </div>
+
+                    <!-- Sensor Alert -->
+                    <div id="sensor-alert" class="nx-alert hidden">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span>SENSOR OVERRIDE — All visual routing bypassed. Rerouted to specialized handling.</span>
+                    </div>
+
+                    <!-- Routing Decision -->
+                    <div class="nx-routing-card">
+                        <span class="routing-label">Robotic Routing Decision</span>
+                        <span class="routing-value" id="routing-bin">—</span>
+                        <span class="routing-instructions" id="instructions">—</span>
+                    </div>
+
+                    <!-- Wash Recommendation -->
+                    <div class="nx-wash-rec" id="wash-rec">
+                        <span class="wash-cycle-label">Recommended Cycle</span>
+                        <span class="wash-temp" id="wash-temp">—</span>
+                        <span class="wash-cycle-name" id="wash-cycle">—</span>
+                        <span class="wash-detergent" id="wash-detergent">—</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
