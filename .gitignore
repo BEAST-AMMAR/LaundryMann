@@ -10,13 +10,7 @@ env.bak/
 venv.bak/
 .env
 
-# Model weights and runs
-runs/
-*.pt
-*.pth
-*.onnx
-
-# Datasets (Too large for GitHub)
+# Datasets (Too large for GitHub, will crash push)
 data/
 datasets/
 laundry_data/
@@ -33,4 +27,6 @@ node_modules/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Sensitive Info / Credentials
 wardrobe.db
