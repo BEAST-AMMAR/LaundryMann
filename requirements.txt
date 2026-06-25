@@ -13,6 +13,12 @@ streamlit==1.25.0
 plotly==5.15.0
 pandas==2.0.3
 passlib==1.7.4
+bcrypt==4.0.1
+extra-streamlit-components
 fastapi
 uvicorn
 python-multipart
+ultralytics
+SQLAlchemy==2.0.20
+fpdf2==2.7.5
+pytesseract==0.3.10

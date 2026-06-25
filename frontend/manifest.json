@@ -1,0 +1,21 @@
+{
+  "name": "NEXUS Laundry AI",
+  "short_name": "NEXUS",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#101114",
+  "theme_color": "#101114",
+  "description": "Autonomous Garment Classification & Robotic Routing",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -4,6 +4,7 @@
   "scripts": {
     "start": "python -u -m streamlit run streamlit_app.py --server.port 8501",
     "dev": "python -u -m uvicorn api:app --port 8000 --reload",
-    "api": "python -u run_server.py"
+    "api": "python -u run_server.py",
+    "install-deps": "pip install -r requirements.txt"
   }
 }
