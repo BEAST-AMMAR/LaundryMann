@@ -1,5 +1,5 @@
 import sqlite3
-import hashlib
+from src.security.auth_manager import SecurityAuthManager
 
 DB_NAME = "laundry_users.db"
 
@@ -11,15 +11,15 @@ def init_db():
     conn.commit()
     conn.close()
 
-def make_hashes(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
+def make_hashes(password: str) -> str:
+    """Uses cryptographically salted PBKDF2-HMAC-SHA256."""
+    return SecurityAuthManager.hash_password(password)
 
-def check_hashes(password, hashed_text):
-    if make_hashes(password) == hashed_text:
-        return hashed_text
-    return False
+def check_hashes(password: str, hashed_text: str) -> bool:
+    """Constant-time verification against timing attacks."""
+    return SecurityAuthManager.verify_password(password, hashed_text)
 
-def add_user(username, password):
+def add_user(username: str, password: str) -> bool:
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
@@ -27,16 +27,17 @@ def add_user(username, password):
                   (username, make_hashes(password)))
         conn.commit()
         success = True
-    except:
+    except Exception:
         success = False
     conn.close()
     return success
 
-def login_user(username, password):
+def login_user(username: str, password: str):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE username =? AND password = ?', 
-              (username, make_hashes(password)))
-    data = c.fetchall()
+    c.execute('SELECT password FROM users WHERE username = ?', (username,))
+    row = c.fetchone()
     conn.close()
-    return data
+    if row and check_hashes(password, row[0]):
+        return [(username, row[0])]
+    return []

@@ -1,0 +1,225 @@
+openapi: 3.1.0
+info:
+  title: LaundryMann API
+  version: 2.0.0
+  description: Garment analysis and wash planning. All routes except /auth/* and /health/* require a Bearer access token.
+servers:
+  - url: https://localhost/api/v1
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      summary: Register
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RegisterIn' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/UserOut' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /auth/login:
+    post:
+      summary: Login (returns access token; sets refresh cookie)
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LoginIn' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenOut' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /auth/refresh:
+    post:
+      summary: Rotate refresh token (cookie) and issue new access token
+      security: []
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenOut' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+  /auth/logout:
+    post:
+      summary: Revoke refresh-token family
+      responses: { '204': { description: No content } }
+  /images:
+    post:
+      summary: Upload an image (sanitised and re-encoded)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, kind]
+              properties:
+                file: { type: string, format: binary }
+                kind: { type: string, enum: [garment, basket, label] }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/ImageOut' } } } }
+        '413': { $ref: '#/components/responses/Problem' }
+        '415': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /analyses:
+    post:
+      summary: Analyse an uploaded image
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AnalysisIn' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/AnalysisOut' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /analyses/{id}:
+    get:
+      summary: Get analysis
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AnalysisOut' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+  /analyses/{id}/corrections:
+    patch:
+      summary: Correct a predicted attribute
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CorrectionIn' } } }
+      responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/Problem' } }
+  /analyses/{id}/guide.pdf:
+    get:
+      summary: PDF wash guide
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+  /loads/plan:
+    post:
+      summary: Group analyses into safe loads
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LoadPlanIn' } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/LoadPlanOut' } } } } }
+  /wardrobe/items:
+    get:
+      summary: List wardrobe items
+      parameters:
+        - { in: query, name: cursor, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create wardrobe item
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/WardrobeIn' } } } }
+      responses: { '201': { description: Created } }
+  /me/export:
+    get: { summary: Export all my data, responses: { '200': { description: ZIP } } }
+  /me:
+    delete: { summary: Delete my account and data, responses: { '202': { description: Accepted } } }
+  /health/live:
+    get: { summary: Liveness, security: [], responses: { '200': { description: OK } } }
+  /health/ready:
+    get: { summary: Readiness (models loaded), security: [], responses: { '200': { description: Ready }, '503': { description: Not ready } } }
+  /admin/models:
+    get: { summary: List model versions (admin), responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Problem' } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id: { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Problem:
+      description: Error (RFC 9457)
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        request_id: { type: string }
+    RegisterIn:
+      type: object
+      additionalProperties: false
+      required: [email, password, display_name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 12, maxLength: 128 }
+        display_name: { type: string, minLength: 1, maxLength: 80 }
+    LoginIn:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties: { email: { type: string, format: email }, password: { type: string } }
+    UserOut:
+      type: object
+      properties: { id: { type: string, format: uuid }, email: { type: string }, display_name: { type: string } }
+    TokenOut:
+      type: object
+      properties: { access_token: { type: string }, expires_in: { type: integer } }
+    ImageOut:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        blur_score: { type: number }
+    AnalysisIn:
+      type: object
+      additionalProperties: false
+      required: [image_id]
+      properties:
+        image_id: { type: string, format: uuid }
+        label_image_id: { type: string, format: uuid }
+        mode: { type: string, enum: [garment, basket], default: garment }
+        fabric_override: { type: string }
+    Attribute:
+      type: object
+      properties:
+        value: { type: string }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        confidence_label: { type: string, enum: [high, medium, low, unsure] }
+        source: { type: string, enum: [model, ocr, symbol, user, rule] }
+        alternatives: { type: array, items: { type: object } }
+    AnalysisOut:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category: { $ref: '#/components/schemas/Attribute' }
+        colour_family: { $ref: '#/components/schemas/Attribute' }
+        bleed_risk: { type: string }
+        palette: { type: array, items: { type: object } }
+        fabric: { $ref: '#/components/schemas/Attribute' }
+        stains: { type: array, items: { type: object } }
+        constraints: { type: object }
+        plan: { type: object }
+        reasons: { type: array, items: { type: object } }
+        warnings: { type: array, items: { type: string } }
+        abstained: { type: boolean }
+        model_versions: { type: object }
+    CorrectionIn:
+      type: object
+      additionalProperties: false
+      required: [attribute, new_value]
+      properties:
+        attribute: { type: string, enum: [category, colour_family, fabric, stain_type] }
+        new_value: { type: string }
+        share_for_training: { type: boolean, default: false }
+    LoadPlanIn:
+      type: object
+      additionalProperties: false
+      required: [analysis_ids]
+      properties:
+        analysis_ids: { type: array, minItems: 2, maxItems: 60, items: { type: string, format: uuid } }
+        capacity_items: { type: integer, minimum: 1, maximum: 60, default: 20 }
+    LoadPlanOut:
+      type: object
+      properties: { id: { type: string, format: uuid }, loads: { type: array, items: { type: object } } }
+    WardrobeIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties: { name: { type: string, maxLength: 120 }, analysis_id: { type: string, format: uuid }, notes: { type: string } }

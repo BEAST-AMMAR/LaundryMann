@@ -2,10 +2,11 @@ import uvicorn
 import os
 import sys
 
-workspace = r"f:\onedrive backup\OneDrive\Desktop\laundry assist"
+workspace = os.path.dirname(os.path.abspath(__file__))
 os.chdir(workspace)
-sys.path.insert(0, workspace)
+if workspace not in sys.path:
+    sys.path.insert(0, workspace)
 
 if __name__ == "__main__":
-    print("Starting Uvicorn programmatically...")
-    uvicorn.run("api:app", host="0.0.0.0", port=8000)
+    print("[NEXUS Workcell] Starting Uvicorn API server...")
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=False)

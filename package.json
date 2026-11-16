@@ -1,10 +1,15 @@
 {
-  "name": "laundry-assist",
-  "version": "1.0.0",
+  "name": "laundrymann",
+  "version": "2.0.0",
+  "description": "Nexus Laundry AI: Autonomous Industrial Garment Sorting & Quality Inspection Workcell",
+  "author": "Muhammad Ammar",
+  "license": "MIT",
   "scripts": {
     "start": "python -u -m streamlit run streamlit_app.py --server.port 8501",
     "dev": "python -u -m uvicorn api:app --port 8000 --reload",
     "api": "python -u run_server.py",
+    "test": "python -m unittest discover tests",
+    "eval": "python src/evals/benchmark_eval.py",
     "install-deps": "pip install -r requirements.txt"
   }
 }

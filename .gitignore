@@ -1,25 +1,90 @@
+# ==============================================================================
+# NEXUS LAUNDRY AI - PRODUCTION GITIGNORE
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
 env/
 venv/
 .venv/
 env.bak/
 venv.bak/
-.env
+ENV/
+env*/
 
-# Datasets (Too large for GitHub, will crash push)
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Local SQLite & User Databases
+*.db
+*.sqlite
+*.sqlite3
+wardrobe.db
+laundry_users.db
+
+# Redundant Training Checkpoints (Keep best.pt and baseline weights only)
+runs/**/last.pt
+*.ckpt
+
+# Datasets (Local storage - keep repository clean & lightweight)
 data/
 datasets/
 laundry_data/
 yolo_dataset/
 
-# Node modules
+# Node modules & Web artifacts
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# OS generated files
+# Testing & Coverage
+.coverage
+.coverage.*
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+
+# Logs & Diagnostics
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# OS Specific
 .DS_Store
 .DS_Store?
 ._*
@@ -27,6 +92,10 @@ node_modules/
 .Trashes
 ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# Sensitive Info / Credentials
-wardrobe.db
+# IDE & Editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace

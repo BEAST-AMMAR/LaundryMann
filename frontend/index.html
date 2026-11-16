@@ -74,6 +74,12 @@
                     <p class="drop-zone-text">Drop garment image<br><span>or click to browse</span></p>
                     <input type="file" id="file-input" accept="image/*" hidden>
                 </div>
+                <button id="capture-cam-btn" class="nx-btn nx-btn-secondary" style="margin-bottom: 8px; width: 100%;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    Overhead Camera Scan
+                </button>
                 <button id="analyze-btn" class="nx-btn nx-btn-primary" disabled>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
@@ -174,6 +180,10 @@
                         <span class="routing-label">Robotic Routing Decision</span>
                         <span class="routing-value" id="routing-bin">—</span>
                         <span class="routing-instructions" id="instructions">—</span>
+                        <div id="robot-coords" style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--accent-cyan, #06B6D4); margin-top: 8px;">—</div>
+                        <button id="dispatch-robot-btn" class="nx-btn nx-btn-primary" style="margin-top: 12px; width: 100%;" disabled>
+                            Execute Robotic Pick & Place
+                        </button>
                     </div>
 
                     <!-- Wash Recommendation -->

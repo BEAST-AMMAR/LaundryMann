@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const analyzeBtn = document.getElementById('analyze-btn');
+    const captureCamBtn = document.getElementById('capture-cam-btn');
     const odorSensor = document.getElementById('odor-sensor');
     const uvSensor = document.getElementById('uv-sensor');
     
@@ -27,34 +28,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const washTemp = document.getElementById('wash-temp');
     const washCycle = document.getElementById('wash-cycle');
     const washDetergent = document.getElementById('wash-detergent');
+    const robotCoords = document.getElementById('robot-coords');
+    const dispatchRobotBtn = document.getElementById('dispatch-robot-btn');
 
     let selectedFile = null;
+    let lastBinId = null;
+
+    // Relative API Base
+    const API_BASE = window.location.origin;
 
     // ─── Drag & Drop Handlers ───────────────────────────────────────
-    dropZone.addEventListener('click', () => fileInput.click());
+    if (dropZone) {
+        dropZone.addEventListener('click', () => fileInput.click());
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
 
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
 
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            handleFileSelect(e.dataTransfer.files[0]);
-        }
-    });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+    }
 
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFileSelect(e.target.files[0]);
-        }
-    });
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+    }
 
     function handleFileSelect(file) {
         if (!file.type.startsWith('image/')) {
@@ -64,22 +75,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         selectedFile = file;
         const textContainer = dropZone.querySelector('.drop-zone-text');
-        textContainer.innerHTML = `<span>${file.name}</span><br>Ready for scan`;
-        
-        const icon = dropZone.querySelector('.drop-zone-icon');
-        icon.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+        if (textContainer) {
+            textContainer.innerHTML = `<span>${file.name}</span><br>Ready for scan`;
+        }
         
         analyzeBtn.disabled = false;
         
-        // Hide empty state immediately, but keep results hidden until analysis
-        emptyState.classList.add('hidden');
-        resultsContainer.classList.add('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (resultsContainer) resultsContainer.classList.add('hidden');
 
-        // Show raw image preview immediately
         const reader = new FileReader();
         reader.onload = (e) => {
             visionFeed.src = e.target.result;
-            // Show results container so vision feed is visible, but clear old metrics
             resultsContainer.classList.remove('hidden');
             resetMetrics();
         };
@@ -98,25 +105,54 @@ document.addEventListener('DOMContentLoaded', () => {
         washTemp.textContent = "—";
         washCycle.textContent = "—";
         washDetergent.textContent = "—";
+        if (robotCoords) robotCoords.textContent = "—";
         sensorAlert.classList.add('hidden');
     }
 
+    // ─── Hardware Camera Direct Capture ─────────────────────────────
+    if (captureCamBtn) {
+        captureCamBtn.addEventListener('click', async () => {
+            loadingOverlay.classList.remove('hidden');
+            try {
+                const res = await fetch(`${API_BASE}/hardware/camera/capture`);
+                const data = await res.json();
+                if (data.status === 'success' && data.image_base64) {
+                    visionFeed.src = 'data:image/jpeg;base64,' + data.image_base64;
+                    emptyState.classList.add('hidden');
+                    resultsContainer.classList.remove('hidden');
+                    resetMetrics();
+                    // Auto analyze live frame
+                    executeAnalysis(null);
+                }
+            } catch (err) {
+                console.error("Failed to capture from hardware camera:", err);
+                alert("Hardware camera unavailable. Please check physical connection or use file upload.");
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+    }
+
     // ─── AI Pipeline Execution ──────────────────────────────────────
-    analyzeBtn.addEventListener('click', async () => {
-        if (!selectedFile) return;
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', () => {
+            executeAnalysis(selectedFile);
+        });
+    }
 
-        // Show loading state
+    async function executeAnalysis(file) {
         loadingOverlay.classList.remove('hidden');
-
         const formData = new FormData();
-        formData.append('file', selectedFile);
-        formData.append('odor_detected', odorSensor.checked);
-        formData.append('uv_fluorescence', uvSensor.checked);
+        if (file) {
+            formData.append('file', file);
+        }
+        formData.append('odor_detected', odorSensor ? odorSensor.checked : false);
+        formData.append('uv_fluorescence', uvSensor ? uvSensor.checked : false);
 
         const startTime = performance.now();
 
         try {
-            const response = await fetch('http://localhost:8000/analyze', {
+            const response = await fetch(`${API_BASE}/analyze`, {
                 method: 'POST',
                 body: formData
             });
@@ -131,30 +167,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('Error during analysis:', error);
-            alert('Analysis failed. Ensure the NEXUS backend server (FastAPI) is running on port 8000.');
+            alert('Analysis failed. Ensure the NEXUS backend server is online.');
         } finally {
             loadingOverlay.classList.add('hidden');
             resultsContainer.classList.remove('hidden');
         }
-    });
+    }
 
     function updateUI(data, latency) {
         if (data.status !== 'success') return;
 
-        // Update Vision Feed if annotated image is provided
+        // Update Vision Feed with bounding boxes
         if (data.annotated_image) {
             visionFeed.src = 'data:image/jpeg;base64,' + data.annotated_image;
         }
 
-        // Latency
         latencyVal.textContent = `${latency}ms`;
 
         // Ensemble Metrics
         fabricVal.textContent = data.analysis.fabric.prediction;
-        fabricConf.textContent = `${(data.analysis.fabric.confidence * 100).toFixed(1)}%`;
+        fabricConf.textContent = `${(data.analysis.fabric.confidence * 100).toFixed(0)}%`;
         
-        colorVal.textContent = data.analysis.color.prediction;
-        colorConf.textContent = `${(data.analysis.color.confidence * 100).toFixed(1)}%`;
+        colorVal.textContent = data.analysis.color.color_name || data.analysis.color.prediction;
+        colorConf.textContent = `Bleed: ${data.analysis.color.bleed_risk || 'LOW'}`;
         
         stainVal.textContent = data.analysis.stains_detected;
 
@@ -168,24 +203,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Routing Decision
-        routingBin.textContent = data.decision.routing_bin;
+        lastBinId = data.decision.routing_bin;
+        routingBin.textContent = `${data.decision.routing_bin} · ${data.decision.bin_name || ''}`;
         instructions.innerHTML = `<strong>Parameters:</strong> ${data.decision.instructions}`;
 
-        // Wash Cycle Recommendations (Local frontend mapping based on bin)
-        const washRecs = {
-            "BIN_A": { cycle: "Standard Wash", temp: "40°C", det: "Standard Powder Detergent" },
-            "BIN_B": { cycle: "Heavy Duty", temp: "60°C", det: "Heavy Enzyme Pre-Treat" },
-            "BIN_C": { cycle: "Cold Wash", temp: "20°C", det: "Color-Safe Liquid" },
-            "BIN_D": { cycle: "Stain Cycle", temp: "30°C", det: "Oxygen Booster" },
-            "BIN_E": { cycle: "Delicate", temp: "30°C", det: "Mild Gentle Liquid" },
-            "BIN_F": { cycle: "Sanitize / Ozone", temp: "Cold", det: "Ozone Module" },
-            "BIN_G": { cycle: "Manual Inspection", temp: "N/A", det: "Manual Spot Clean" }
-        };
+        const recipe = data.decision.recipe;
+        if (recipe) {
+            washTemp.textContent = recipe.temp;
+            washCycle.textContent = recipe.cycle;
+            washDetergent.textContent = recipe.detergent;
+        }
 
-        const rec = washRecs[data.decision.routing_bin] || washRecs["BIN_G"];
-        
-        washTemp.textContent = rec.temp;
-        washCycle.textContent = rec.cycle;
-        washDetergent.textContent = `Pre-treat: ${rec.det}`;
+        // Robotic Arm Trajectory Parameters
+        if (data.robotics && robotCoords) {
+            const p = data.robotics.grasp_parameters.pick_coords_mm;
+            const d = data.robotics.target_drop_coords;
+            robotCoords.innerHTML = `Pick: [${p.x}, ${p.y}, ${p.z}]mm → Drop: [${d.x}, ${d.y}, ${d.z}]mm | Grip: ${data.robotics.grasp_parameters.grip_force_n}N`;
+        }
+
+        if (dispatchRobotBtn) {
+            dispatchRobotBtn.disabled = false;
+        }
+    }
+
+    // ─── Robotic Arm Dispatch Trigger ───────────────────────────────
+    if (dispatchRobotBtn) {
+        dispatchRobotBtn.addEventListener('click', async () => {
+            if (!lastBinId) return;
+            dispatchRobotBtn.disabled = true;
+            dispatchRobotBtn.textContent = "Dispatched...";
+            try {
+                const formData = new FormData();
+                formData.append('bin_id', lastBinId);
+                const res = await fetch(`${API_BASE}/robot/dispatch`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const rdata = await res.json();
+                alert(`Robotic Arm executed cycle #${rdata.dispatch_packet.cycle_id} in ${rdata.dispatch_packet.cycle_duration_ms}ms!`);
+            } catch (err) {
+                console.error("Robotic dispatch failed:", err);
+            } finally {
+                dispatchRobotBtn.disabled = false;
+                dispatchRobotBtn.textContent = "Execute Robotic Pick & Place";
+            }
+        });
     }
 });

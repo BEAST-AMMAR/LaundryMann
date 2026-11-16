@@ -4,14 +4,14 @@ import numpy as np
 import shutil
 import random
 
-# Source directories
+# Source and Destination directories relative to workspace
+WORKSPACE = os.path.dirname(os.path.abspath(__file__))
 SOURCE_DIRS = [
-    r"f:/onedrive backup/OneDrive/Desktop/laundry assist/data/fashion apparels/Apparel images dataset new",
-    r"f:/onedrive backup/OneDrive/Desktop/laundry assist/data/fabric strain/images"
+    os.path.join(WORKSPACE, "data", "fashion apparels", "Apparel images dataset new"),
+    os.path.join(WORKSPACE, "data", "fabric strain", "images")
 ]
 
-# Destination directory
-BASE_DIR = r"f:/onedrive backup/OneDrive/Desktop/laundry assist/laundry_data"
+BASE_DIR = os.path.join(WORKSPACE, "laundry_data")
 TRAIN_DIR = os.path.join(BASE_DIR, "train")
 VAL_DIR = os.path.join(BASE_DIR, "val")
 
